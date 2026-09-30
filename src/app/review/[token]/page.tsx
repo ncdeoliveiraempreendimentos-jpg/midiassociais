@@ -80,14 +80,14 @@ function CarouselSwiper({
         onScroll={handleScroll}
       >
         {slides.map((slide, idx) => (
-          <div key={slide.id} className="flex-shrink-0 w-full snap-center">
-            <div className="aspect-square bg-[#111118] rounded-2xl overflow-hidden mx-2">
+          <div key={slide.id} className="flex-shrink-0 w-full snap-center flex items-center justify-center">
+            <div className="w-full mx-2 rounded-2xl overflow-hidden bg-[#111118]">
               {slide.active_version && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={getSupabaseFileUrl(slide.active_version.file_path)}
                   alt={`Imagem ${idx + 1}`}
-                  className="w-full h-full object-contain"
+                  className="w-full h-auto object-contain max-h-[70vh]"
                   loading="lazy"
                 />
               )}
