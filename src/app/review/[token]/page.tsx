@@ -146,12 +146,14 @@ function CarouselSwiper({
 function SlideApprovalCard({
   slide,
   index,
+  totalSlides,
   projectId,
   contentItemId,
   onUpdate,
 }: {
   slide: ContentSlideWithVersions;
   index: number;
+  totalSlides?: number;
   projectId: string;
   contentItemId: string;
   onUpdate: () => void;
@@ -234,7 +236,9 @@ function SlideApprovalCard({
     }`}>
       {/* Status badge */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-zinc-500">Imagem {index + 1}</span>
+        <span className="text-xs text-zinc-500">
+          Imagem {index + 1}{totalSlides ? ` de ${totalSlides}` : ''}
+        </span>
         <span className={`badge ${getStatusBgColor(slide.status)}`}>
           {getStatusIcon(slide.status)} {getStatusLabel(slide.status)}
         </span>
@@ -519,22 +523,28 @@ export default function ReviewPage() {
                   }
                 />
 
-                {/* Approval cards for each slide */}
-                <div className="space-y-3 mt-4">
-                  {item.content_slides.map((slide, idx) => (
-                    <SlideApprovalCard
-                      key={slide.id}
-                      slide={slide as ContentSlideWithVersions}
-                      index={idx}
-                      projectId={projectData.id}
-                      contentItemId={item.id}
-                      onUpdate={loadData}
-                    />
-                  ))}
+                {/* Single approval card - synced with current slide */}
+                <div className="mt-4">
+                  {(() => {
+                    const currentIdx = activeCarouselSlides[item.id] ?? 0;
+                    const currentSlide = item.content_slides[currentIdx];
+                    if (!currentSlide) return null;
+                    return (
+                      <SlideApprovalCard
+                        key={`${currentSlide.id}-${currentIdx}`}
+                        slide={currentSlide as ContentSlideWithVersions}
+                        index={currentIdx}
+                        totalSlides={item.content_slides.length}
+                        projectId={projectData.id}
+                        contentItemId={item.id}
+                        onUpdate={loadData}
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Carousel status summary */}
-                <div className="mt-4 p-3 glass-card text-center">
+                <div className="mt-3 p-3 glass-card text-center">
                   <p className="text-sm text-zinc-400">
                     {item.content_slides.filter(s => s.status === 'approved').length} de{' '}
                     {item.content_slides.length} imagens aprovadas
