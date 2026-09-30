@@ -396,7 +396,7 @@ export default function ReviewPage() {
         *,
         content_slides(
           *,
-          active_version:content_versions!content_slides_active_version_id_fkey(*),
+          versions:content_versions!content_versions_slide_id_fkey(*),
           comments(*)
         )
       `)
@@ -410,6 +410,9 @@ export default function ReviewPage() {
           .sort((a: any, b: any) => a.sort_order - b.sort_order)
           .map((slide: any) => ({
             ...slide,
+            active_version: slide.active_version_id
+              ? (slide.versions || []).find((v: any) => v.id === slide.active_version_id) || null
+              : null,
             comments: (slide.comments || []).sort((a: any, b: any) =>
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             ),

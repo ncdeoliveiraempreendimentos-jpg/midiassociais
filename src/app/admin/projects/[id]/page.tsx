@@ -232,24 +232,34 @@ export default function ProjectPage() {
     }
 
     // Load content items with slides and versions
-    const { data: itemsData } = await supabase
+    const { data: itemsData, error: itemsError } = await supabase
       .from('content_items')
       .select(`
         *,
         content_slides(
           *,
-          active_version:content_versions!content_slides_active_version_id_fkey(*),
-          versions:content_versions(*)
+          versions:content_versions!content_versions_slide_id_fkey(*)
         )
       `)
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true });
 
+    if (itemsError) {
+      console.error('Error loading items:', itemsError);
+    }
+
     if (itemsData) {
-      // Sort slides within each item
+      // Sort slides and resolve active_version from versions array
       const sorted = itemsData.map(item => ({
         ...item,
-        content_slides: (item.content_slides || []).sort((a: ContentSlide, b: ContentSlide) => a.sort_order - b.sort_order),
+        content_slides: (item.content_slides || [])
+          .sort((a: ContentSlide, b: ContentSlide) => a.sort_order - b.sort_order)
+          .map((slide: any) => ({
+            ...slide,
+            active_version: slide.active_version_id
+              ? (slide.versions || []).find((v: any) => v.id === slide.active_version_id) || null
+              : null,
+          })),
       }));
       setContentItems(sorted as ContentItemWithSlides[]);
     }
