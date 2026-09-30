@@ -139,7 +139,7 @@ function SortableSlideThumbnail({
             <img src={fileUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
           )}
           {fileUrl && isVideo && (
-            <div className="w-full h-full flex items-center justify-center text-3xl">🎬</div>
+            <video src={fileUrl} className="w-full h-full object-cover" muted playsInline />
           )}
           {/* Status badge */}
           <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
@@ -734,15 +734,24 @@ export default function ProjectPage() {
 
                           {/* Add more slides button */}
                           {item.type === 'carousel' && (
-                            <button
+                            <div
+                              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              onDrop={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const files = Array.from(e.dataTransfer.files);
+                                if (files.length > 0) {
+                                  await uploadFiles(item.id, files);
+                                }
+                              }}
                               onClick={() => triggerFileUpload(item.id, 'carousel')}
-                              className="shrink-0 w-[140px] aspect-square rounded-xl border-2 border-dashed border-[var(--color-glass-border)] flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-white hover:border-[var(--color-accent)] transition-colors"
+                              className="shrink-0 w-[140px] aspect-square rounded-xl border-2 border-dashed border-[var(--color-glass-border)] flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-white hover:border-[var(--color-accent)] transition-colors cursor-pointer"
                             >
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                               </svg>
                               <span className="text-[10px]">Adicionar</span>
-                            </button>
+                            </div>
                           )}
                         </div>
                       </SortableContext>
@@ -773,17 +782,26 @@ export default function ProjectPage() {
                 {/* Empty state for items without slides */}
                 {(!item.content_slides || item.content_slides.length === 0) && (
                   <div className="ml-8 mt-2 mb-4">
-                    <button
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) {
+                          await uploadFiles(item.id, files);
+                        }
+                      }}
                       onClick={() => triggerFileUpload(item.id, item.type)}
-                      className="upload-zone w-full max-w-xs"
+                      className="upload-zone w-full max-w-xs cursor-pointer"
                     >
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 text-zinc-500">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                       </svg>
                       <p className="text-xs text-zinc-500">
-                        Clique para selecionar {item.type === 'video' ? 'um vídeo' : 'imagens'}
+                        Clique ou arraste {item.type === 'video' ? 'um vídeo' : 'imagens'}
                       </p>
-                    </button>
+                    </div>
                   </div>
                 )}
               </div>
