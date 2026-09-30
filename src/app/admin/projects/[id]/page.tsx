@@ -338,13 +338,16 @@ export default function ProjectPage() {
     setUploadProgress(0);
     setUploadError(null);
 
+    // Sort files alphabetically by name to ensure correct order
+    const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
     try {
       const item = contentItems.find(i => i.id === contentItemId);
       const currentSlideCount = item?.content_slides?.length || 0;
       let successCount = 0;
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < sortedFiles.length; i++) {
+        const file = sortedFiles[i];
         const ext = file.name.split('.').pop();
         const filePath = `projects/${projectId}/${contentItemId}/slide-${currentSlideCount + i}/v1.${ext}`;
 
