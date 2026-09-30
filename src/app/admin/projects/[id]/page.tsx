@@ -194,6 +194,7 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Modal states
   const [showAddContent, setShowAddContent] = useState(false);
@@ -325,60 +326,85 @@ export default function ProjectPage() {
   const uploadFiles = async (contentItemId: string, files: File[]) => {
     setUploading(true);
     setUploadProgress(0);
+    setUploadError(null);
 
-    const item = contentItems.find(i => i.id === contentItemId);
-    const currentSlideCount = item?.content_slides?.length || 0;
+    try {
+      const item = contentItems.find(i => i.id === contentItemId);
+      const currentSlideCount = item?.content_slides?.length || 0;
+      let successCount = 0;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = file.name.split('.').pop();
-      const filePath = `projects/${projectId}/${contentItemId}/slide-${currentSlideCount + i}/v1.${ext}`;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split('.').pop();
+        const filePath = `projects/${projectId}/${contentItemId}/slide-${currentSlideCount + i}/v1.${ext}`;
 
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('project-files')
-        .upload(filePath, file, { upsert: true });
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, file, { upsert: true });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        continue;
-      }
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          setUploadError(`Erro ao enviar "${file.name}": ${uploadError.message}`);
+          continue;
+        }
 
-      // Create slide
-      const { data: slideData } = await supabase
-        .from('content_slides')
-        .insert({
-          content_item_id: contentItemId,
-          sort_order: currentSlideCount + i,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (slideData) {
-        // Create version
-        const { data: versionData } = await supabase
-          .from('content_versions')
+        // Create slide
+        const { data: slideData, error: slideError } = await supabase
+          .from('content_slides')
           .insert({
-            slide_id: slideData.id,
-            file_path: filePath,
-            file_name: file.name,
-            file_type: file.type,
-            version_number: 1,
+            content_item_id: contentItemId,
+            sort_order: currentSlideCount + i,
+            status: 'pending',
           })
           .select()
           .single();
 
-        if (versionData) {
-          // Update slide with active version
-          await supabase
-            .from('content_slides')
-            .update({ active_version_id: versionData.id })
-            .eq('id', slideData.id);
+        if (slideError) {
+          console.error('Slide error:', slideError);
+          setUploadError(`Erro ao criar slide: ${slideError.message}`);
+          continue;
         }
+
+        if (slideData) {
+          // Create version
+          const { data: versionData, error: versionError } = await supabase
+            .from('content_versions')
+            .insert({
+              slide_id: slideData.id,
+              file_path: filePath,
+              file_name: file.name,
+              file_type: file.type,
+              version_number: 1,
+            })
+            .select()
+            .single();
+
+          if (versionError) {
+            console.error('Version error:', versionError);
+            setUploadError(`Erro ao criar versão: ${versionError.message}`);
+            continue;
+          }
+
+          if (versionData) {
+            // Update slide with active version
+            await supabase
+              .from('content_slides')
+              .update({ active_version_id: versionData.id })
+              .eq('id', slideData.id);
+          }
+          successCount++;
+        }
+
+        setUploadProgress(((i + 1) / files.length) * 100);
       }
 
-      setUploadProgress(((i + 1) / files.length) * 100);
+      if (successCount === 0 && files.length > 0) {
+        setUploadError('Nenhum arquivo foi enviado com sucesso. Verifique o console do navegador para detalhes.');
+      }
+    } catch (err: any) {
+      console.error('Upload exception:', err);
+      setUploadError(`Erro inesperado: ${err.message}`);
     }
 
     setUploading(false);
@@ -670,6 +696,16 @@ export default function ProjectPage() {
           </div>
           <div className="progress-bar mt-3">
             <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Upload Error */}
+      {uploadError && (
+        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-400">⚠️ {uploadError}</p>
+            <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
           </div>
         </div>
       )}
